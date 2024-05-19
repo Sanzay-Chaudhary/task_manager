@@ -1,8 +1,5 @@
 import 'dart:convert';
-
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:task_manager/models/task.dart';
 
@@ -31,19 +28,13 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late TextEditingController _taskController;
-
-  Future<void> saveData() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    Task t = Task.fromString(_taskController.text);
-    prefs.setString('task', json.encode(t.getMap()));
-    //_taskController.text = "";
-    _taskController.clear();
-  }
+  List<Task> _tasks = [];
 
   @override
   void initState() {
     super.initState();
     _taskController = TextEditingController();
+    _getTask();
   }
 
   @override
@@ -52,14 +43,82 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
+  Future<void> saveData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    Task t = Task.fromString(_taskController.text);
+
+    String? tasks = prefs.getString('task');
+    List list = (tasks == null) ? [] : json.decode(tasks);
+
+    list.add(json.encode(t.getMap()));
+
+    prefs.setString('task', json.encode(list));
+    _taskController.clear();
+    Navigator.of(context).pop();
+    _getTask(); // Refresh tasks after saving
+  }
+
+  Future<void> _getTask() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? tasks = prefs.getString('task');
+    List list = (tasks == null) ? [] : json.decode(tasks);
+
+    setState(() {
+      _tasks = list.map((item) => Task.fromMap(json.decode(item))).toList();
+    });
+  }
+
+  Future<void> _saveTasks() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> taskList = _tasks
+        .where((task) => !task.isCompleted)
+        .map((task) => json.encode(task.getMap()))
+        .toList();
+    await prefs.setString('task', json.encode(taskList));
+  }
+
+  void _toggleTaskCompletion(int index, bool? value) {
+    setState(() {
+      _tasks[index].isCompleted = value ?? false;
+    });
+    _saveTasks();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.red,
         title: const Text("Task Manager"),
+        actions: [
+          IconButton(
+            onPressed: () async {
+              await _saveTasks();
+              setState(() {
+                print("Tasks saved successfully!");
+              });
+            },
+            icon: const Icon(Icons.save),
+          )
+        ],
       ),
-      body: const Center(child: Text("No task added yet")),
+      body: _tasks.isEmpty
+          ? const Center(child: Text("No task added yet"))
+          : ListView.builder(
+              itemCount: _tasks.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text(_tasks[index].task ?? ''),
+                  subtitle: Text(_tasks[index].time?.toIso8601String() ?? ''),
+                  trailing: Checkbox(
+                    value: _tasks[index].isCompleted,
+                    onChanged: (bool? value) {
+                      _toggleTaskCompletion(index, value);
+                    },
+                  ),
+                );
+              },
+            ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.blue,
         child: const Icon(Icons.add, color: Colors.white),
@@ -67,7 +126,6 @@ class _HomePageState extends State<HomePage> {
           context: context,
           builder: (BuildContext context) => Container(
             padding: const EdgeInsets.all(10.0),
-            //width: MediaQuery.of(context).size.width,
             color: Colors.blue,
             child: SingleChildScrollView(
               child: Column(
@@ -77,8 +135,9 @@ class _HomePageState extends State<HomePage> {
                     children: [
                       const Text("Add task"),
                       GestureDetector(
-                          child: const Icon(Icons.close),
-                          onTap: () => Navigator.of(context).pop()),
+                        child: const Icon(Icons.close),
+                        onTap: () => Navigator.of(context).pop(),
+                      ),
                     ],
                   ),
                   const Divider(thickness: 1.2),
@@ -101,20 +160,12 @@ class _HomePageState extends State<HomePage> {
                     children: [
                       ElevatedButton(
                         onPressed: () => _taskController.clear(),
-                        style: const ButtonStyle(
-                            //minimumSize:
-                            // MaterialStateProperty.all(const Size(200, 50)),
-                            ),
+                        style: const ButtonStyle(),
                         child: const Text("RESET"),
                       ),
                       ElevatedButton(
-                        onPressed: () {
-                          saveData();
-                        },
-                        style: const ButtonStyle(
-                            //minimumSize:
-                            //MaterialStateProperty.all(const Size(200, 50)),
-                            ),
+                        onPressed: saveData,
+                        style: const ButtonStyle(),
                         child: const Text("Add"),
                       ),
                     ],

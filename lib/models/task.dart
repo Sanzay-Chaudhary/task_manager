@@ -1,30 +1,35 @@
 class Task {
   String? task;
   DateTime? time;
+  bool isCompleted;
 
-  Task({this.task, this.time});
+  Task({
+    this.task,
+    this.time,
+    this.isCompleted = false,
+  });
 
-  // Factory constructor to create a Task object from a string
   factory Task.fromString(String task) {
     return Task(
       task: task,
       time: DateTime.now(),
+      isCompleted: false,
     );
   }
 
-  // Factory constructor to create a Task object from a map
   factory Task.fromMap(Map<String, dynamic> map) {
     return Task(
       task: map['task'],
       time: DateTime.fromMillisecondsSinceEpoch(map['time']),
+      isCompleted: map['isCompleted'] ?? false, // Default to false if null
     );
   }
 
-  // Method to convert Task object to a map
   Map<String, dynamic> getMap() {
     return {
-      'task': this.task,
-      'time': this.time?.millisecondsSinceEpoch,
+      'task': task,
+      'time': time?.millisecondsSinceEpoch,
+      'isCompleted': isCompleted,
     };
   }
 }
