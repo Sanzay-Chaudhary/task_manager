@@ -29,6 +29,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late TextEditingController _taskController;
   List<Task> _tasks = [];
+  Task? _selectedTask;
 
   @override
   void initState() {
@@ -55,7 +56,7 @@ class _HomePageState extends State<HomePage> {
     prefs.setString('task', json.encode(list));
     _taskController.clear();
     Navigator.of(context).pop();
-    _getTask(); // Refresh tasks after saving
+    _getTask();
   }
 
   Future<void> _getTask() async {
@@ -84,6 +85,16 @@ class _HomePageState extends State<HomePage> {
     _saveTasks();
   }
 
+  Future<void> _deleteTasks(Task taskToDelete) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    _tasks.remove(taskToDelete);
+    List<String> taskList = _tasks
+        .where((task) => !task.isCompleted)
+        .map((task) => json.encode(task.getMap()))
+        .toList();
+    await prefs.setString('task', json.encode(taskList));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -99,7 +110,19 @@ class _HomePageState extends State<HomePage> {
               });
             },
             icon: const Icon(Icons.save),
-          )
+          ),
+          IconButton(
+            onPressed: () async {
+              if (_selectedTask != null) {
+                await _deleteTasks(_selectedTask!);
+                setState(() {
+                  print("Task deleted successfully!");
+                  _selectedTask = null;
+                });
+              }
+            },
+            icon: const Icon(Icons.delete),
+          ),
         ],
       ),
       body: _tasks.isEmpty

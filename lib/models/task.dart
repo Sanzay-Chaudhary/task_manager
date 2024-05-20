@@ -21,7 +21,7 @@ class Task {
     return Task(
       task: map['task'],
       time: DateTime.fromMillisecondsSinceEpoch(map['time']),
-      isCompleted: map['isCompleted'] ?? false, // Default to false if null
+      isCompleted: map['isCompleted'] ?? false,
     );
   }
 
